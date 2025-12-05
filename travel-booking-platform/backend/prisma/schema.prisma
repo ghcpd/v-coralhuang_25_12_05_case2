@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  fullName  String
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bookings  Booking[]
+  reviews   Review[]
+}
+
+model Tour {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  destination String
+  duration    Int      // in days
+  price       Float
+  maxPersons  Int
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  bookings    Booking[]
+  reviews     Review[]
+}
+
+model Flight {
+  id           String   @id @default(uuid())
+  airline      String
+  flightNumber String
+  origin       String
+  destination  String
+  departure    DateTime
+  arrival      DateTime
+  price        Float
+  seatsAvailable Int
+  createdAt    DateTime @default(now())
+  bookings     Booking[]
+}
+
+model Accommodation {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  location    String
+  price       Float
+  maxGuests   Int
+  amenities   String[]
+  createdAt   DateTime @default(now())
+  bookings    Booking[]
+  reviews     Review[]
+}
+
+model Booking {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingType     String   // "tour", "flight", "accommodation"
+  tourId          String?
+  tour            Tour?    @relation(fields: [tourId], references: [id], onDelete: SetNull)
+  flightId        String?
+  flight          Flight?  @relation(fields: [flightId], references: [id], onDelete: SetNull)
+  accommodationId String?
+  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id], onDelete: SetNull)
+  status          String   @default("pending") // pending, confirmed, cancelled
+  totalPrice      Float
+  passengers      Int
+  checkIn         DateTime?
+  checkOut        DateTime?
+  paymentId       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  bookingId     String
+  amount        Float
+  currency      String   @default("USD")
+  status        String   // "pending", "succeeded", "failed"
+  stripePaymentIntentId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Review {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tourId          String?
+  tour            Tour?    @relation(fields: [tourId], references: [id], onDelete: SetNull)
+  accommodationId String?
+  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id], onDelete: SetNull)
+  rating          Int      // 1-5
+  comment         String?
+  createdAt       DateTime @default(now())
+}
