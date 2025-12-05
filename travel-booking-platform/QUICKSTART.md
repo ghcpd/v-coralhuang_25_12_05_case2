@@ -19,11 +19,30 @@ A comprehensive, production-ready tour and travel booking platform built with mo
 
 ## 🚀 Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Automated Setup (Windows - Easiest!)
 
-```bash
+```powershell
+cd travel-booking-platform\backend
+.\setup.ps1
+```
+
+This script automatically:
+- ✅ Checks Node.js version
+- ✅ Installs dependencies
+- ✅ Creates .env configuration
+- ✅ Sets up database schema
+- ✅ Seeds sample data (5 tours, 3 flights, 4 hotels, 1 demo user)
+- ✅ Starts the server
+
+### Option 2: Docker Compose
+
+```powershell
 cd travel-booking-platform
 docker-compose up -d
+
+# Wait 30 seconds for database, then seed:
+cd backend
+npm run seed
 ```
 
 Access:
@@ -31,24 +50,52 @@ Access:
 - Backend: http://localhost:5000
 - API Health: http://localhost:5000/api/health
 
-### Option 2: Manual Setup
+### Option 3: Manual Setup
 
 **Backend:**
-```bash
+```powershell
 cd backend
 npm install
-cp .env.example .env
-# Edit .env with your configuration
-npx prisma migrate dev
+
+# Create .env file with these values:
+# DATABASE_URL="postgresql://postgres:password@localhost:5432/travel_booking"
+# JWT_SECRET="your-secret-key-here-change-in-production"
+# PORT=5000
+
+npx prisma generate
+npx prisma migrate dev --name init
+npx ts-node prisma/seed.ts
 npm run dev
 ```
 
 **Frontend:**
-```bash
+```powershell
 cd frontend
 npm install
-cp .env.local.example .env.local
 npm run dev
+```
+
+### 🧪 Test Your Setup
+
+**Run automated tests:**
+```powershell
+cd backend
+.\test-api.ps1
+```
+
+**Or login with demo account:**
+- Email: `demo@travel.com`
+- Password: `demo123`
+
+**Quick API test:**
+```powershell
+# Health check
+Invoke-RestMethod -Uri "http://localhost:5000/api/health"
+
+# Login
+$body = @{ email="demo@travel.com"; password="demo123" } | ConvertTo-Json
+$response = Invoke-RestMethod -Uri "http://localhost:5000/api/auth/login" -Method Post -Body $body -ContentType "application/json"
+Write-Host "Token: $($response.token)"
 ```
 
 ---
