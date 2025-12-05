@@ -1,40 +1,24 @@
-# Tour & Travel Booking Platform — MVP
+# Travel Booking Platform — demo scaffold
 
-This workspace contains a minimal full-stack MVP for a tour & travel booking platform (backend + frontend). It includes core features: search, bookings, user authentication, and a placeholder for Stripe-based payments.
+This repository contains a minimal, demo implementation of a travel booking platform (backend + lightweight frontend). It's a starting point implementing core functionality and integration points.
 
 Folders:
-- `backend/` — Express API server (SQLite local DB)
-- `frontend/` — React app (Vite)
+- `backend/` — Flask REST API, SQLite DB, Stripe test integration
+- `frontend/` — Lightweight single-file React UI (uses CDN) for demos
 
-Run the apps locally (from the root of this workspace):
+Quick start (Windows PowerShell):
 
-1. Start the backend
-
-```powershell
-cd backend
-npm install
-npm run migrate    # creates local SQLite DB and tables
-npm start
-```
-
-2. Start the frontend (new terminal)
+1. Backend: create a virtualenv and install dependencies
 
 ```powershell
-cd frontend
-npm install
-npm run dev
+python -m venv .venv; .\.venv\Scripts\Activate; pip install -r backend/requirements.txt
+setx FLASK_APP backend/app.py
+setx FLASK_ENV development
+setx DATABASE_URL sqlite:///backend/app.db
+setx JWT_SECRET_KEY change-this-secret
+python -m backend.app
 ```
 
-Open the frontend in your browser at http://localhost:5173 — the frontend talks to the backend at http://localhost:4000
+2. Open the frontend by opening `frontend/index.html` in a browser (or serve it using a static server) and point it at `http://localhost:5000`.
 
-More details are in `backend/README.md` and `frontend/README.md`.
-
-Packaging the deliverable
-
-You can create a ZIP of the repository using the PowerShell helper (Windows):
-
-```powershell
-./scripts/package.ps1 -Out "tour-travel-deliverable.zip"
-```
-
-API docs are available at `docs/APIDOC.md`.
+This is a demo + scaffold — expand services, add robust tests, containerization, CI/CD, and production-grade configuration for a full roadmap.
