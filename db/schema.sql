@@ -1,0 +1,25 @@
+-- SQLite schema for demo project
+CREATE TABLE user (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  name TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE listing (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  description TEXT,
+  type TEXT,
+  price_cents INTEGER NOT NULL DEFAULT 0,
+  available BOOLEAN DEFAULT 1
+);
+
+CREATE TABLE booking (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES user(id),
+  listing_id INTEGER NOT NULL REFERENCES listing(id),
+  status TEXT DEFAULT 'pending',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

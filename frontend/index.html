@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Travel Booking Demo</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 0; }
+      header{background:#0b5; padding: 1rem; color: white}
+      main{padding:1rem}
+      .listing { border: 1px solid #ddd; padding: 0.5rem; margin-bottom: 0.5rem }
+      .controls { display:flex; gap:0.5rem; margin-bottom:0.5rem }
+      @media (min-width:700px){ .controls{ max-width:800px } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Travel Booking Demo</h1>
+    </header>
+
+    <main>
+      <section id="auth">
+        <input id="email" placeholder="email" />
+        <input id="password" placeholder="password" type="password" />
+        <button id="btnLogin">Login / Register (demo)</button>
+        <div id="userInfo"></div>
+      </section>
+
+      <section>
+        <div class="controls">
+          <input id="q" placeholder="Search tours, flights, hotels" style="flex:1" />
+          <select id="type"><option value="">All</option><option value="tour">Tour</option><option value="flight">Flight</option><option value="hotel">Hotel</option></select>
+          <button id="btnSearch">Search</button>
+        </div>
+        <div id="results"></div>
+      </section>
+    </main>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+      const base = location.hostname === 'localhost' ? 'http://localhost:5000' : ''; // adjust for prod
+
+      const tokenKey = 'tb_token'
+      const stripePublishableKey = '' // optionally set from server if you serve this HTML from Flask
+
+      function setUserInfo(user){
+        const el = document.getElementById('userInfo')
+        if(!user){ el.innerHTML = ''; return }
+        el.innerHTML = `<div>Signed in as <strong>${user.email}</strong> (<em>${user.name||'–'}</em>)</div>`
+      }
+
+      async function requestJson(path, opts={}){
+        opts.headers = opts.headers||{}
+        const t = localStorage.getItem(tokenKey)
+        if(t) opts.headers['Authorization'] = `Bearer ${t}`
+        const res = await fetch(base+path, opts)
+        return res.json()
+      }
+
+      document.getElementById('btnLogin').addEventListener('click', async ()=>{
+        const email = document.getElementById('email').value
+        const password = document.getElementById('password').value
+        if(!email || !password) return alert('enter creds')
+
+        // try register then login
+        const reg = await requestJson('/api/auth/register', { method:'POST', body: JSON.stringify({ email, password, name: email.split('@')[0] }), headers: {'Content-Type': 'application/json'}})
+        const token = reg.token || (await requestJson('/api/auth/login',{ method:'POST', body: JSON.stringify({ email, password }), headers: {'Content-Type': 'application/json'}})).token
+        if(token){ localStorage.setItem(tokenKey, token); const me = await requestJson('/api/auth/me'); setUserInfo(me.user) }
+      })
+
+      document.getElementById('btnSearch').addEventListener('click', async ()=>{
+        const q = document.getElementById('q').value
+        const type = document.getElementById('type').value
+        const params = new URLSearchParams({ q, type })
+        const res = await fetch('/api/search?'+params.toString())
+        const data = await res.json()
+        const root = document.getElementById('results')
+        root.innerHTML = ''
+        for(const r of data.results){
+          const div = document.createElement('div')
+          div.className = 'listing'
+          div.innerHTML = `<h3>${r.title} — $${(r.price_cents/100).toFixed(2)}</h3><p>${r.description||''}</p><button data-id="${r.id}" data-price="${r.price_cents}">Book</button>`
+          div.querySelector('button').addEventListener('click', async (e)=>{
+            const id = e.target.dataset.id
+            // start booking -> then present a payment flow
+            const price = parseInt(e.target.dataset.price||0,10)
+            const token = localStorage.getItem(tokenKey)
+            if(!token) return alert('please login first')
+
+            // create a payment intent
+            const payResp = await fetch('/api/create-payment-intent', { method: 'POST', headers: {'Content-Type':'application/json', 'Authorization': `Bearer ${token}`}, body: JSON.stringify({ amount_cents: price, currency: 'usd' }) })
+            const payData = await payResp.json()
+            if(!payData.client_secret){
+              // fallback to booking without payment for demo
+              const resp = await requestJson('/api/book', { method:'POST', body: JSON.stringify({ listing_id: id }), headers:{'Content-Type':'application/json'}})
+              alert('Booked (no payment): ' + JSON.stringify(resp))
+              return
+            }
+
+            // use Stripe.js to confirm payment
+            if(window.Stripe && stripePublishableKey){
+              const stripe = Stripe(stripePublishableKey)
+              const elements = stripe.elements()
+              // create and mount a small card element
+              const elHolder = document.createElement('div')
+              elHolder.innerHTML = `<div id='stripe-payment' style='padding:10px;border:1px solid #ccc;margin-top:8px;'><div id='card-element'></div><button id='confirm-pay'>Pay ${(price/100).toFixed(2)}</button></div>`
+              div.appendChild(elHolder)
+              const card = elements.create('card')
+              card.mount('#card-element')
+              elHolder.querySelector('#confirm-pay').addEventListener('click', async ()=>{
+                const {error, paymentIntent} = await stripe.confirmCardPayment(payData.client_secret, {payment_method: {card}})
+                if(error){ alert('Payment failed: '+ error.message); return }
+                alert('Payment ok, booking now...')
+                const resp = await requestJson('/api/book', { method:'POST', body: JSON.stringify({ listing_id: id }), headers:{'Content-Type':'application/json'}})
+                alert('Booked: ' + JSON.stringify(resp))
+              })
+            } else {
+              // no Stripe; do non-payment booking for demo
+              const resp = await requestJson('/api/book', { method:'POST', body: JSON.stringify({ listing_id: id }), headers:{'Content-Type':'application/json'}})
+              alert('Booked (no stripe): ' + JSON.stringify(resp))
+            }
+          })
+          root.appendChild(div)
+        }
+      })
+    </script>
+  </body>
+</html>
