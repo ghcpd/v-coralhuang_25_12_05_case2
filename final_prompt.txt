@@ -42,3 +42,14 @@ You are an experienced software developer with 10 years of expertise in building
 ## **Deliverables**
 
 Provide a complete, business-ready platform including all source code, database schemas, and necessary documentation.
+The output format should include:
+
+* A zipped directory of the project files.
+* A README file detailing the setup process, usage instructions, and API documentation.
+
+---
+
+## **Constraints**
+
+* The project must be completed within 12 weeks.
+* All code should be written in a clean, maintainable style, following industry best practices for software development.
